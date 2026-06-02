@@ -1,67 +1,110 @@
 ---
 name: council-review-loop
-description: Iterative council review loop that fixes all findings until council concurs without complaints. Use when user wants a council review, peer review, or says "council review loop".
+description: Iterative council review loop that auto-fixes high/medium/low findings across up to 2 fix rounds, always ending with a final review. Use when user wants a council review, peer review, or says "council review loop".
 ---
 
 # Council Review Loop
 
-Iterative review loop: council peer review → fix all findings → repeat until council concurs with zero complaints.
+Review-fix loop: review → fix → review → fix → final review. Two fix rounds max, always ends on a review.
+
+## Severity Scale
+
+| Severity | Action |
+|----------|--------|
+| **high** | Auto-fix. Bugs, incorrect behavior, data loss/corruption risk. |
+| **medium** | Auto-fix. Design flaws, missing edge cases, architectural smells, fragile logic. |
+| **low** | Auto-fix. Dead code, missing observability, minor robustness gaps. |
+| **nit** | Announce only. Naming, style, test coverage, readability suggestions. |
+
+High, medium, and low are **actionable** — they trigger fixes and re-review.
+Nit is **advisory** — logged for the user, never fixed in this loop, never triggers another round.
 
 ## Workflow
 
-### 1. Council Peer Review
+### Round 1: Review
 
-Delegate to `@council` with this prompt structure:
+Delegate to `@council`:
 
 ```
 Peer review this change for correctness, code quality, maintainability,
-naming, style, dead code, potential bugs, and architectural concerns.
+potential bugs, and architectural concerns.
 
-Be HARSH. Flag EVERYTHING: errors, warnings, nits, style issues,
-naming inconsistencies, dead code, missing edge cases, potential bugs.
+IMPORTANT: You MUST delegate this review to your councillors. Do NOT
+answer yourself. Run multiple councillors in parallel, collect their
+individual reviews, then synthesize into a single verdict.
 
-Severity levels: error, warning, nit, suggestion.
+Classify each finding as: high, medium, low, or nit.
+Include file, line, and fix suggestion for every finding.
 
-Return your verdict: CONCUR (zero findings) or REJECT (any findings).
-
-If REJECT: list ALL findings with severity, file, line, and fix suggestion.
+Return CONCUR (zero high/medium/low findings) or REJECT (any high/medium/low findings).
+Nit findings alone do not constitute REJECT.
 ```
 
-### 2. Fix All Council Findings
+If **CONCUR** → report any nit findings as advisory, exit.
 
-If council returns REJECT or any findings (even nits/suggestions):
+If **REJECT** → proceed to Round 1 Fix.
 
-- fix EVERY finding, no matter how minor;
-- do not dismiss nits or suggestions as "non-blocking";
-- apply all fixes before re-submitting.
+### Round 1: Fix
 
-### 3. Re-submit to Council
+- Fix every high, medium, and low finding.
+- Log nit findings for the user — do not fix them.
+- Proceed to Round 2 Review.
 
-After fixing, send back to `@council` with:
+### Round 2: Review
+
+Re-submit to `@council`:
 
 ```
-Previous findings fixed. Re-review for any remaining issues.
-Same harshness. Return CONCUR or REJECT with findings.
+Previous high/medium/low findings have been fixed.
+Re-review for any remaining issues.
+
+IMPORTANT: You MUST delegate this review to your councillors. Do NOT
+answer yourself.
+
+Classify each finding as: high, medium, low, or nit.
+Return CONCUR or REJECT. Nit findings alone do not constitute REJECT.
 ```
 
-### 4. Repeat Until Concur
+If **CONCUR** → report any nit findings as advisory, exit.
 
-Loop steps 1-3 until council returns **CONCUR with zero findings**.
+If **REJECT** → proceed to Round 2 Fix.
 
-### 5. Final Summary
+### Round 2: Fix
 
-When council concurs:
+- Fix every remaining high, medium, and low finding.
+- Log any new nit findings for the user — do not fix them.
+- Proceed to Final Review (no more fixes after this).
 
-- report total iterations and findings fixed.
+### Final Review
+
+Submit to `@council` one last time:
+
+```
+All actionable findings from two review rounds have been fixed.
+This is the final review — no further fixes will be made.
+
+IMPORTANT: You MUST delegate this review to your councillors. Do NOT
+answer yourself.
+
+Classify each finding as: high, medium, low, or nit.
+Return CONCUR or REJECT.
+```
+
+Report the final verdict:
+- If **CONCUR** → clean pass. Report total findings fixed across all rounds, plus any nit findings as advisory.
+- If **REJECT** → report remaining high/medium/low findings as **unresolved** for the user to triage.
 
 ## Termination
 
-- max 5 iterations; if still rejecting, report blockers to user;
-- if council returns CONCUR, exit immediately.
+- **2 fix rounds max** — no exceptions.
+- **3 reviews total** — the final review is always performed after the last fix round.
+- If the council concurs at any review, report and exit (the concur IS the clean final review).
+- Nit findings never trigger a fix round.
 
 ## Key Rules
 
-- never skip findings labeled "nit" or "non-blocking";
-- never self-dismiss findings without fixing;
-- council's CONCUR is the only exit condition;
-- treat all severity levels (error, warning, nit, suggestion) as must-fix.
+- **auto-fix high, medium, and low** — all three severity levels are actionable;
+- **nit is advisory only** — announce to user, never fix in this loop;
+- **always end on a review** — the loop closes with council verdict, not with a fix;
+- **always instruct the council to delegate to councillors** — never let it answer alone;
+- **2 fix rounds hard cap** — after that, report whatever remains for the user.
