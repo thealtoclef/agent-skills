@@ -5,18 +5,18 @@
 Requires Node.js and npm (`npx`).
 
 Install **all skills** from [thealtoclef/agent-skills](https://github.com/thealtoclef/agent-skills)
-globally for Claude Code:
+globally in the canonical user skills directory only:
 
 ```sh
 npx skills add thealtoclef/agent-skills \
   --global \
-  --agent claude-code \
+  --agent universal \
   --yes \
   --skill '*'
 ```
 
-Skills are installed globally in `~/.agents/skills`, with symlinks in
-`~/.claude/skills`. Agents that read the shared directory can also discover them.
+Skills are installed user-wide in `~/.agents/skills` without links to other
+agent directories.
 
 ## External skills
 
@@ -39,12 +39,13 @@ These skills are maintained upstream, not copied into this repository.
 
 ### Install
 
-Install only the selected skills globally for Claude Code:
+Install only the selected skills globally in the canonical user skills
+directory:
 
 ```sh
 npx skills add mattpocock/skills \
   --global \
-  --agent claude-code \
+  --agent universal \
   --yes \
   --skill \
     codebase-design \
